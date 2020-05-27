@@ -37,5 +37,19 @@ int main(int argc, char* argv[])
     peer = enet_host_connect(client, &address, 1, 0);
     // now check if the connection failed
     if (!peer) { fprintf(stderr, "There was an issue connecting to the host\n"); return -1; }
-    if (enet_host_service(client, &event, 1000) <= 0) { printf("A response was not recieved\n"); }
+    //if (enet_host_service(client, &event, 1000) <= 0) { printf("A response was not recieved\n"); exit(0); }
+    while (enet_host_service(client, &event, 1000) > 0)
+    {
+        switch (event.type)
+        {
+            case ENET_EVENT_TYPE_CONNECT:
+                printf("A connection was made to address: %x\n", event.peer->address.host);
+                break;
+            case ENET_EVENT_TYPE_RECEIVE:
+                printf("Recieved a packet of length %u containing %s", event.packet->dataLength, event.packet->data);
+                break;
+            default:
+                break;
+        }
+    }
 }
