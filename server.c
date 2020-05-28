@@ -19,13 +19,12 @@ int main(int argc, char* argv[])
     }
     atexit(enet_deinitialize);
 
-
     ENetEvent event;
 
     ENetAddress address;
     ENetHost* server;
 
-    // We are going to check if this program has ben run with sufficient args
+    // We are going to check if this program has been run with sufficient args
     // And if none are provided, we assume port 2222,
     // else if the args are invalid, return an error and abort.
 
@@ -66,10 +65,10 @@ int main(int argc, char* argv[])
                 }
                 // copy the first four bytes, which are reserved for the packet type
                 uint32_t packetType;
-                memcpy(packetType, event.packet->data, sizeof(uint32_t));
+                memcpy(&packetType, event.packet->data, sizeof(uint32_t));
                 uint8_t* packetData = event.packet->data + sizeof(uint32_t);
-                usize_t len = event.packet->dataLength - sizeof(uint32_t);
-                usize_t idx = 0;
+                size_t len = event.packet->dataLength - sizeof(uint32_t);
+                size_t idx = 0;
                 if (!event.peer->data)
                 {
                     if (packetType != PLAYER_DATA_PACKET)
@@ -84,6 +83,5 @@ int main(int argc, char* argv[])
                 break;
         }
     }
-
 }
 

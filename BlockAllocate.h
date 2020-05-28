@@ -1,3 +1,4 @@
+#pragma once
 #include <stdint.h>
 
 // this structure contains all of the relevant state for
@@ -7,7 +8,7 @@ typedef struct BlockPage
 {
     void* pool;
     void** free;
-    size_t top;
+    __ssize_t top;
     size_t blksize;
     size_t numblk;
 } BlockPage;

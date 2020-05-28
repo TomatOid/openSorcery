@@ -10,6 +10,7 @@ typedef struct hashItem
     struct hashItem* next;
 } hashItem;
 
+// A seprate chaining hash table implememtation
 typedef struct hashTable
 {
     hashItem** items;
@@ -18,5 +19,6 @@ typedef struct hashTable
     size_t num;
 } hashTable;
 
-//void insertHashItem(hashTable* table, long key, void* value, long timestamp);
-//int findHashItem(hashTable* table, long key, long timestamp, long maxage);
+bool insertToTable(hashTable* table, uint64_t key, void* value);
+void* findInTable(hashTable* table, uint64_t key);
+void* removeFromTable(hashTable* table, uint64_t key);

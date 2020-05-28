@@ -28,14 +28,15 @@ void makePage(BlockPage* res, size_t num_blocks, size_t block_size)
 {
     // using posix_memallign so that the result of blkalloc can be simply cast
     // to a type of size block_size without being worried about allignment
-    posix_memalign(&res->pool, block_size, num_blocks * block_size);
+    //if (posix_memalign(&res->pool, block_size, num_blocks * block_size) != 0) { exit(EXIT_FAILURE); }
+    res->pool = calloc(num_blocks, num_blocks * block_size);
     res->free = calloc(num_blocks, sizeof(void*));
 
     // now we need to fill up the free stack 
-    intptr_t ptr = res->pool;
-    for (size_t i = num_blocks - 1; i >= 0; i--)
+    intptr_t ptr = (intptr_t)res->pool;
+    for (size_t i = 0; i < num_blocks; i++)
     {
-        res->free[i] = (void*)ptr;
+        res->free[num_blocks - i - 1] = (void*)ptr;
         ptr += block_size;
     }
     res->top = num_blocks - 1;
