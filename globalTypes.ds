@@ -1,0 +1,15 @@
+@Serializeable
+Player :: struct
+{
+    @c2s @s2c name : [20]char;
+    @c2s @s2c uuid : uint64_t;
+    @s2c health : int16_t;
+}
+
+@Serializeable
+thing :: struct
+{
+    @c2s a : sint16_t;
+    @s2c b : uint32_t;
+    @s2c @c2s c : Player;
+}
