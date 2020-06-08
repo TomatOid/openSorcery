@@ -20,6 +20,34 @@ int writeToStream(uint8_t** stream, size_t* len, void* src, size_t nbytes)
     *len -= nbytes;
     return 1;
 }
+int ReadVector3FromClient(uint8_t **stream, size_t *len, Vector3 *obj)
+{
+    if (!cpyFromStream(stream, len, &obj->x, 4)) return 0;
+    if (!cpyFromStream(stream, len, &obj->y, 4)) return 0;
+    if (!cpyFromStream(stream, len, &obj->z, 4)) return 0;
+    return 1;
+}
+int WriteVector3ToServer(uint8_t **stream, size_t *len, Vector3 *obj)
+{
+    if (!writeToStream(stream, len, &obj->x, 4)) return 0;
+    if (!writeToStream(stream, len, &obj->y, 4)) return 0;
+    if (!writeToStream(stream, len, &obj->z, 4)) return 0;
+    return 1;
+}
+int ReadVector3FromServer(uint8_t **stream, size_t *len, Vector3 *obj)
+{
+    if (!cpyFromStream(stream, len, &obj->x, 4)) return 0;
+    if (!cpyFromStream(stream, len, &obj->y, 4)) return 0;
+    if (!cpyFromStream(stream, len, &obj->z, 4)) return 0;
+    return 1;
+}
+int WriteVector3ToClient(uint8_t **stream, size_t *len, Vector3 *obj)
+{
+    if (!writeToStream(stream, len, &obj->x, 4)) return 0;
+    if (!writeToStream(stream, len, &obj->y, 4)) return 0;
+    if (!writeToStream(stream, len, &obj->z, 4)) return 0;
+    return 1;
+}
 int ReadPlayerFromClient(uint8_t **stream, size_t *len, Player *obj)
 {
     if (!cpyFromStream(stream, len, &obj->name, 20)) return 0;
@@ -44,5 +72,23 @@ int WritePlayerToClient(uint8_t **stream, size_t *len, Player *obj)
     if (!writeToStream(stream, len, &obj->name, 20)) return 0;
     if (!writeToStream(stream, len, &obj->uuid, 8)) return 0;
     if (!writeToStream(stream, len, &obj->health, 2)) return 0;
+    return 1;
+}
+int ReadChunkFromClient(uint8_t **stream, size_t *len, Chunk *obj)
+{
+    return 1;
+}
+int WriteChunkToServer(uint8_t **stream, size_t *len, Chunk *obj)
+{
+    return 1;
+}
+int ReadChunkFromServer(uint8_t **stream, size_t *len, Chunk *obj)
+{
+    if (!cpyFromStream(stream, len, &obj->blocks, 8192)) return 0;
+    return 1;
+}
+int WriteChunkToClient(uint8_t **stream, size_t *len, Chunk *obj)
+{
+    if (!writeToStream(stream, len, &obj->blocks, 8192)) return 0;
     return 1;
 }

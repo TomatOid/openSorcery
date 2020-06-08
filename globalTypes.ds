@@ -1,9 +1,34 @@
+CHUNK_WIDTH :: 16
+CHUNK_HEIGHT :: 32
+
+@Serializeable
+Vector3 :: struct
+{
+    @c2s @s2c x : uint32_t;
+    @c2s @s2c y : uint32_t;
+    @c2s @s2c z : uint32_t;
+}
+
 @Serializeable
 Player :: struct
 {
     @c2s @s2c name : [20]char;
     @c2s @s2c uuid : uint64_t;
     @s2c health : int16_t;
+}
+
+PlayerLinkedListNode :: struct
+{
+    // maybe add a mutex
+    player_pointer : *Player;
+    next : *PlayerLinkedListNode;
+}
+
+@Serializeable
+Chunk :: struct
+{
+    @s2c blocks : [CHUNK_WIDTH * CHUNK_WIDTH * CHUNK_HEIGHT]uint8_t;
+    PlayerLinkedList : *PlayerLinkedListNode;
 }
 
 // Enumerate all the different packet types

@@ -111,7 +111,7 @@ size_t isTransmitable(DataDeskNode *node)
     if (DataDeskIsArrayType(node, &base_type, &array_size_expression))
     {
         node = base_type;
-        size = atoi(array_size_expression->string);
+        size = DataDeskInterpretNumericExpressionAsInteger(array_size_expression);
     }
     for (int i = 0; i < sizeof(transmitable_types) / sizeof(char*); i++)
     {
