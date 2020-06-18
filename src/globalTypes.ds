@@ -1,8 +1,8 @@
 CHUNK_WIDTH :: 16
 CHUNK_HEIGHT :: 32
-STATE_BUFFER_SIZE :: 32
+STATE_BUFFER_SIZE :: 8
 TARGET_TICKS_PER_SECOND :: 20
-PLAYER_MAX_VELOCITY :: 2
+PLAYER_MAX_VELOCITY :: 3
 
 ButtonFlag :: flags
 {
@@ -46,7 +46,7 @@ Player :: struct
     @s2c on_ground : uint8_t;
     write_index : uint32_t;
     read_index : uint32_t;
-    state_buffer : [STATE_BUFFER_SIZE]PlayerState;
+    state_buffer : [STATE_BUFFER_SIZE]PlayerState; 
 }
 
 PlayerLinkedListNode :: struct

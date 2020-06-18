@@ -191,7 +191,7 @@ int main(int argc, char* argv[])
         enet_peer_send(&client->peers[0], 0, enet_packet_create(player_state_buffer, sizeof(player_state_buffer), 0));
         // just draw a pixel where the player should be
         SDL_SetRenderDrawColor(main_renderer, 0, 0, 0, 0);
-        SDL_RenderClear(main_renderer);
+        //SDL_RenderClear(main_renderer);
         SDL_SetRenderDrawColor(main_renderer, 255, 255, 255, 0);
         SDL_RenderDrawPoint(main_renderer, this_player.position.x, this_player.position.z);
         //printf("%d, %d\n", this_player.position.x, this_player.position.y);

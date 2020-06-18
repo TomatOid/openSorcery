@@ -121,6 +121,8 @@ int main(int argc, char* argv[])
                 Player *target_player = (Player *)target_peer->data;
                 if (target_player->read_index < target_player->write_index)
                 {
+                    // if too far behind, skip one update.
+                    // this allows clients with up to 2x higher speed to play without sudden jumps
                     if (target_player->write_index - target_player->read_index > STATE_BUFFER_SIZE / 2)
                     {
                         target_player->read_index++;
