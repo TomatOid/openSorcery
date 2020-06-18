@@ -189,7 +189,6 @@ int main(int argc, char* argv[])
         writeHeaderToStream(&stream, &player_state_length, PLAYER_VERB_PACKET);
         writePlayerStateToServer(&stream, &player_state_length, new_player_state);
         enet_peer_send(&client->peers[0], 0, enet_packet_create(player_state_buffer, sizeof(player_state_buffer), 0));
-        //enet_host_flush(&client);
         // just draw a pixel where the player should be
         SDL_SetRenderDrawColor(main_renderer, 0, 0, 0, 0);
         SDL_RenderClear(main_renderer);

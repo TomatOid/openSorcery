@@ -1,8 +1,8 @@
 #define CHUNK_WIDTH (16)
 #define CHUNK_HEIGHT (32)
-#define STATE_BUFFER_SIZE (32)
+#define STATE_BUFFER_SIZE (8)
 #define TARGET_TICKS_PER_SECOND (20)
-#define PLAYER_MAX_VELOCITY (2)
+#define PLAYER_MAX_VELOCITY (3)
 enum
 {
     FOREWARD_BUTTON = (1<<0),
@@ -72,6 +72,7 @@ struct Player
     uint32_t write_index;
     uint32_t read_index;
     PlayerState state_buffer[STATE_BUFFER_SIZE];
+    uint64_t last_update_tick;
 };
 #define C2S_PLAYER_SIZE 28
 int writePlayerToServer(uint8_t **stream, size_t *len, Player *obj);

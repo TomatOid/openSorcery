@@ -109,6 +109,7 @@ int main(int argc, char* argv[])
     // if the server is running behind, this value may be changed
     uint32_t actual_ticks_per_second = TARGET_TICKS_PER_SECOND;
     uint32_t complete_cycle_by = SDL_GetTicks() + 1000 / actual_ticks_per_second;
+    uint64_t tick_number = 0;
     while (1)
     {
         // Do one tick
@@ -120,15 +121,19 @@ int main(int argc, char* argv[])
                 Player *target_player = (Player *)target_peer->data;
                 if (target_player->read_index < target_player->write_index)
                 {
+                    if (target_player->write_index - target_player->read_index > STATE_BUFFER_SIZE / 2)
+                    {
+                        target_player->read_index++;
+                    }
                     PlayerState *last_command = &target_player->state_buffer[target_player->read_index % STATE_BUFFER_SIZE];
                     // first, make sure the player is following all the rules
-                    if (abs(last_command->x_velocity) > PLAYER_MAX_VELOCITY / 2)
+                    if (abs(last_command->x_velocity) > PLAYER_MAX_VELOCITY)
                     {
-                        last_command->x_velocity = (last_command->x_velocity > 0) ? PLAYER_MAX_VELOCITY / 2 : -PLAYER_MAX_VELOCITY / 2;
+                        last_command->x_velocity = (last_command->x_velocity > 0) ? PLAYER_MAX_VELOCITY : -PLAYER_MAX_VELOCITY;
                     }
                     if (abs(last_command->z_velocity) > PLAYER_MAX_VELOCITY)
                     {
-                        last_command->z_velocity = (last_command->z_velocity > 0) ? PLAYER_MAX_VELOCITY / 2 : -PLAYER_MAX_VELOCITY / 2;
+                        last_command->z_velocity = (last_command->z_velocity > 0) ? PLAYER_MAX_VELOCITY : -PLAYER_MAX_VELOCITY;
                     }
                     // TODO: once chunks are added, add a check to make sure the player is on the ground when jumping
                     // this might also be where we check whether the player has entered or left a chunk
@@ -194,8 +199,10 @@ int main(int argc, char* argv[])
                         switch (packet_type)
                         {
                         case PLAYER_VERB_PACKET:
-                            ((Player *)event.peer->data)->write_index++;
-                            readPlayerStateFromClient(&packet_data, &length, &((Player *)event.peer->data)->state_buffer[((Player *)event.peer->data)->write_index % STATE_BUFFER_SIZE]);
+                            ;Player *target_player = event.peer->data;
+                            target_player->write_index++;
+                            readPlayerStateFromClient(&packet_data, &length, &target_player->state_buffer[target_player->write_index % STATE_BUFFER_SIZE]);
+                            //target_player->last_update_tick = tick_number;
                             break;
                         
                         default:
@@ -244,6 +251,7 @@ int main(int argc, char* argv[])
             }
         }
         complete_cycle_by += 1000 / actual_ticks_per_second;
+        tick_number++;
     }
 }
 
