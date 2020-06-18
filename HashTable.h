@@ -6,26 +6,26 @@
 typedef struct HashItem
 {
     uint64_t key;
-    void* value;
-    struct HashItem* next;
+    void *value;
+    struct HashItem *next;
 } HashItem;
 
 // A seprate chaining hash table struct
 typedef struct HashTable
 {
-    HashItem** items;
+    HashItem **items;
     BlockPage page;
     size_t len;
     size_t num;
 } HashTable;
 
-bool insertToTable(HashTable* table, uint64_t key, void* value)
+bool insertToTable(HashTable *table, uint64_t key, void *value)
 {
     size_t hash = key % table->len;
-    // using a block allocator for this instead of
-    // using calloc to avoid heap fragmentation
-    HashItem* curr;
-    if (!(curr = blkalloc(&table->page))) return false;
+    // using a block allocator for this instead
+    // of calloc to avoid heap fragmentation
+    HashItem *curr = blockAlloc(&table->page);
+    if (!curr) return false;
     curr->key = key;
     curr->value = value;
     // insert the item at the beginning of the linked list
@@ -35,10 +35,10 @@ bool insertToTable(HashTable* table, uint64_t key, void* value)
     return true;
 }
 
-void* findInTable(HashTable* table, uint64_t key)
+void *findInTable(HashTable *table, uint64_t key)
 {
     size_t hash = key % table->len;
-    HashItem* curr = table->items[hash];
+    HashItem *curr = table->items[hash];
 
     while (curr && curr->key != key) { curr = curr->next; }
 
@@ -46,20 +46,20 @@ void* findInTable(HashTable* table, uint64_t key)
     else { return NULL; }
 }
 
-void* removeFromTable(HashTable* table, uint64_t key)
+void *removeFromTable(HashTable *table, uint64_t key)
 {
     size_t hash = key % table->len;
-    HashItem* curr = table->items[hash];
-    HashItem* prev = NULL;
+    HashItem *curr = table->items[hash];
+    HashItem *prev = NULL;
     // loop untill either we hit the end of the list or the keys match
     while (curr && curr->key != key) { prev = curr; curr = curr->next; }
 
     if (curr) 
     { 
-        HashItem* after = (curr)->next;
-        void* value = (curr)->value;
+        HashItem *after = (curr)->next;
+        void *value = (curr)->value;
         if (prev) (prev)->next = after;
-        if (!blkfree(&table->page, curr)) exit(EXIT_FAILURE);
+        if (!blockFree(&table->page, curr)) return NULL;
         if (!prev) table->items[hash] = after;
         table->num--;
         return value;

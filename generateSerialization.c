@@ -61,26 +61,26 @@ DataDeskCustomParseCallback(DataDeskNode *root, char *filename)
     {
         size_t data_length = 0;
         // first do the server header and implementation
-        fprintf(server_header_file, "int Read%sFromClient(uint8_t **stream, size_t *len, %s *obj);\n", root->string, root->string);
-        fprintf(global_implementation_file, "int Read%sFromClient(uint8_t **stream, size_t *len, %s *obj)\n{\n", root->string, root->string);
+        fprintf(server_header_file, "int read%sFromClient(uint8_t **stream, size_t *len, %s *obj);\n", root->string, root->string);
+        fprintf(global_implementation_file, "int read%sFromClient(uint8_t **stream, size_t *len, %s *obj)\n{\n", root->string, root->string);
         data_length = generateSerializationCode(global_implementation_file, root->children_list_head, "obj->", "c2s", MODE_READ);
         fprintf(global_implementation_file, "    return 1;\n}\n");
         // We might want to know how big a client to server packet will be, let's do some #defines
         fprintf(server_header_file, "#define C2S_%s_SIZE %zu\n", DataDeskGetTransformedString(root, DataDeskWordStyle_AllCaps, DataDeskWordSeparator_Underscore), data_length);
         fprintf(client_header_file, "#define C2S_%s_SIZE %zu\n", DataDeskGetTransformedString(root, DataDeskWordStyle_AllCaps, DataDeskWordSeparator_Underscore), data_length);
-        fprintf(client_header_file, "int Write%sToServer(uint8_t **stream, size_t *len, %s *obj);\n", root->string, root->string);
-        fprintf(global_implementation_file, "int Write%sToServer(uint8_t **stream, size_t *len, %s *obj)\n{\n", root->string, root->string);
+        fprintf(client_header_file, "int write%sToServer(uint8_t **stream, size_t *len, %s *obj);\n", root->string, root->string);
+        fprintf(global_implementation_file, "int write%sToServer(uint8_t **stream, size_t *len, %s *obj)\n{\n", root->string, root->string);
         generateSerializationCode(global_implementation_file, root->children_list_head, "obj->", "c2s", MODE_WRITE);
         fprintf(global_implementation_file, "    return 1;\n}\n");
-        fprintf(client_header_file, "int Read%sFromServer(uint8_t **stream, size_t *len, %s *obj);\n", root->string, root->string);
-        fprintf(global_implementation_file, "int Read%sFromServer(uint8_t **stream, size_t *len, %s *obj)\n{\n", root->string, root->string);
+        fprintf(client_header_file, "int read%sFromServer(uint8_t **stream, size_t *len, %s *obj);\n", root->string, root->string);
+        fprintf(global_implementation_file, "int read%sFromServer(uint8_t **stream, size_t *len, %s *obj)\n{\n", root->string, root->string);
         data_length = generateSerializationCode(global_implementation_file, root->children_list_head, "obj->", "s2c", MODE_READ);
         // We might want to know how big a server to client packet will be, let's do some #defines
         fprintf(server_header_file, "#define S2C_%s_SIZE %zu\n", DataDeskGetTransformedString(root, DataDeskWordStyle_AllCaps, DataDeskWordSeparator_Underscore), data_length);
         fprintf(client_header_file, "#define S2C_%s_SIZE %zu\n", DataDeskGetTransformedString(root, DataDeskWordStyle_AllCaps, DataDeskWordSeparator_Underscore), data_length);
         fprintf(global_implementation_file, "    return 1;\n}\n");
-        fprintf(server_header_file, "int Write%sToClient(uint8_t **stream, size_t *len, %s *obj);\n", root->string, root->string);
-        fprintf(global_implementation_file, "int Write%sToClient(uint8_t **stream, size_t *len, %s *obj)\n{\n", root->string, root->string);
+        fprintf(server_header_file, "int write%sToClient(uint8_t **stream, size_t *len, %s *obj);\n", root->string, root->string);
+        fprintf(global_implementation_file, "int write%sToClient(uint8_t **stream, size_t *len, %s *obj)\n{\n", root->string, root->string);
         generateSerializationCode(global_implementation_file, root->children_list_head, "obj->", "s2c", MODE_WRITE);
         fprintf(global_implementation_file, "    return 1;\n}\n");
     }
@@ -121,6 +121,7 @@ size_t isTransmitable(DataDeskNode *node)
     return 0;
 }
 
+// TODO: do one length check at the beginning of every read/write and no more
 static size_t generateSerializationCode(FILE *file, DataDeskNode *root, char *access_string, char *tag, enum Mode mode)
 {
     int resultant_length = 0;
@@ -133,14 +134,11 @@ static size_t generateSerializationCode(FILE *file, DataDeskNode *root, char *ac
     }
     for (DataDeskNode *node = root; node; node = node->next)
     {
-        printf("loop\n");
         if (DataDeskNodeHasTag(node, tag))
         {
-            printf("passed condition 0\n");
             if (node->type == DataDeskNodeType_Declaration)
             {
                 size_t type_length;
-                printf("passed condition 1\n");
                 // TODO make this list exhaustive
                 if (DataDeskMatchType(node, "int") || DataDeskMatchType(node, "size_t"))
                 {
@@ -161,14 +159,12 @@ static size_t generateSerializationCode(FILE *file, DataDeskNode *root, char *ac
                 }
                 else if (node->type == DataDeskNodeType_StructDeclaration)
                 {
-                    printf("reached this point0\n");
                     char next_access_string[ACCESS_STRING_SIZE] = { 0 };
                     snprintf(next_access_string, ACCESS_STRING_SIZE, "%s%s%s", access_string, node->string, DataDeskGetAccessStringForDeclaration(node));
                     generateSerializationCode(file, node->declaration.type->children_list_head, next_access_string, tag, mode);
                 }
                 else if ((node->declaration.type->type == DataDeskNodeType_Identifier && node->declaration.type->reference))
                 {
-                    printf("reached this point\n");
                     char next_access_string[ACCESS_STRING_SIZE] = { 0 };
                     snprintf(next_access_string, ACCESS_STRING_SIZE, "%s%s%s", access_string, node->string, DataDeskGetAccessStringForDeclaration(node));
                     generateSerializationCode(file, node->declaration.type->reference->children_list_head, next_access_string, tag, mode);

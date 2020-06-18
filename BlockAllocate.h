@@ -1,7 +1,9 @@
 #ifndef BLOCKALLOCATE_H_INCLUDED
 #define BLOCKALLOCATE_H_INCLUDED
 #include <stdint.h>
+#include <stddef.h>
 #include <stdlib.h>
+#include <stdatomic.h>
 
 // this structure contains all of the relevant state for
 // a simple block allocator, which can be used when many
@@ -10,31 +12,38 @@ typedef struct
 {
     void* pool;
     void** free;
-    __ssize_t top;
+    _Atomic ptrdiff_t top;
     size_t blksize;
     size_t numblk;
 } BlockPage;
 
 #include <string.h>
 
-void* blkalloc(BlockPage* page)
+void* blockAlloc(BlockPage* page)
 {
-    if (page->top < 0) { return NULL; }
-    void* blk = page->free[page->top];
-    page->top--;
+    // atomically get a block location
+    ptrdiff_t my_block = atomic_fetch_sub(&page->top, 1);
+    // now, we can check if we got a valid block, and atomically release it if it is invalid
+    if (my_block < 0 || my_block >= (ptrdiff_t)page->numblk)
+    {
+        atomic_fetch_add(&page->top, 1); 
+        return NULL; 
+    }
+    void* blk = page->free[my_block];
 
     memset(blk, 0, page->blksize);
     return blk;
 }
 
-int blkfree(BlockPage* page, void* blk)
+int blockFree(BlockPage* page, void* blk)
 {
-    if (page->top >= (__ssize_t)page->numblk) { return 0; } // possible double free
-    // check if blk is within the page's memory pool and is alligned properly
-    if (blk < page->pool || blk >= page->pool + page->numblk * page->blksize) { return 0; } // blk was outside of the valid reigon
-    if (((intptr_t)blk - (intptr_t)page->pool) % page->blksize != 0) { return 0; } // blk was not alligned
-    
-    page->free[page->top++] = blk;
+    ptrdiff_t my_block = atomic_fetch_add(&page->top, 1);
+    if (my_block >= (ptrdiff_t)page->numblk)
+    {
+        atomic_fetch_sub(&page->top, 1);
+        return 0; // if this returns 0, there has likely been a double free
+    }
+    page->free[my_block] = blk;
     return 1;
 }
 
