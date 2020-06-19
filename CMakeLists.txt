@@ -1,6 +1,10 @@
 cmake_minimum_required(VERSION 3.01)
 project(openSourcery)
 
+add_compile_options(
+  "-Wall" "-g"
+)
+
 include_directories(include libs/enet/include)
 find_file(SDL2_INCLUDE_DIR NAME SDL.h HINTS SDL2)
 find_file(SDL2_INCLUDE_DIR NAME SDL_timer.h HINTS SDL2)

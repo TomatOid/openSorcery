@@ -166,6 +166,17 @@ int main(int argc, char* argv[])
             pthread_mutex_lock(&await_response_mutex);
             // handle the command
             printf("got command %s\n", argument_pointers[0]);
+            if (strcmp("list", argument_pointers[0]) == 0)
+            {
+                for (int i = 0; i < server->peerCount; i++)
+                {
+                    Player *target_player = (Player*)server->peers[i].data;
+                    if (target_player)
+                    {
+                        printf("%lu %s\n", target_player->uuid, target_player->name);
+                    }
+                }
+            }
             input_is_ready = 0;
             pthread_cond_signal(&await_response_cond);
             pthread_mutex_unlock(&await_response_mutex);

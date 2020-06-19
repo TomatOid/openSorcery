@@ -1,9 +1,16 @@
-#include <enet/enet.h>
+#if defined(_WIN32) || defined(_WIN64)
+    #include "enet/enet.h"
+    #define SDL_MAIN_HANDLED
+    #include "SDL.h"
+    // if on windows, you will also need the corresponding .lib files in the directory with build_windows.bat
+#else
+    #include <enet/enet.h>
+    #include <SDL2/SDL.h>
+#endif
 #include <stdio.h>
 #include <string.h>
 #include <stdint.h>
 #include "generated_serialize_client.h"
-#include <SDL2/SDL.h>
 #include <time.h>
 
 void playerToLatestState(Player *player)
