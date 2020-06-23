@@ -12,7 +12,7 @@ typedef struct
 {
     void* pool;
     void** free;
-    _Atomic ptrdiff_t top;
+    ptrdiff_t top;
     size_t blksize;
     size_t numblk;
 } BlockPage;
@@ -22,11 +22,11 @@ typedef struct
 void* blockAlloc(BlockPage* page)
 {
     // atomically get a block location
-    ptrdiff_t my_block = atomic_fetch_sub(&page->top, 1);
-    // now, we can check if we got a valid block, and atomically release it if it is invalid
+    ptrdiff_t my_block = page->top--;
+    // now, we can check if we got a valid block, and release it if it is invalid
     if (my_block < 0 || my_block >= (ptrdiff_t)page->numblk)
     {
-        atomic_fetch_add(&page->top, 1); 
+        page->top++;
         return NULL; 
     }
     void* blk = page->free[my_block];
@@ -37,10 +37,10 @@ void* blockAlloc(BlockPage* page)
 
 int blockFree(BlockPage* page, void* blk)
 {
-    ptrdiff_t my_block = atomic_fetch_add(&page->top, 1);
+    ptrdiff_t my_block = page->top++;
     if (my_block >= (ptrdiff_t)page->numblk)
     {
-        atomic_fetch_sub(&page->top, 1);
+        page->top--;
         return 0; // if this returns 0, there has likely been a double free
     }
     page->free[my_block] = blk;
