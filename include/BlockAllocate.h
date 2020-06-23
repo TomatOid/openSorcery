@@ -3,7 +3,6 @@
 #include <stdint.h>
 #include <stddef.h>
 #include <stdlib.h>
-#include <stdatomic.h>
 
 // this structure contains all of the relevant state for
 // a simple block allocator, which can be used when many
