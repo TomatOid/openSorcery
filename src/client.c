@@ -82,20 +82,23 @@ int playerChangePastStateThenPropagate(Player *player, PlayerState correct_past_
     else return 0;
 }
 
-void freePlayerByUUID(HashTable *player_table, BlockPage *player_page, Player **loaded_players_list, size_t number_of_loaded_players, uint64_t unload_uuid)
+void freePlayerByUUID(HashTable *player_table, BlockPage *player_page, Player **loaded_players_list, size_t *number_of_loaded_players, uint64_t unload_uuid)
 {
     void *old_player = removeFromTable(player_table, unload_uuid);
-    for (int i = 0; i < number_of_loaded_players; i++)
+    if (old_player)
     {
-        if (loaded_players_list[i] == old_player)
+        for (int i = 0; i < number_of_loaded_players; i++)
         {
-            // replace with the end of the list
-            loaded_players_list[i] = loaded_players_list[number_of_loaded_players--];
-            loaded_players_list[number_of_loaded_players] = NULL;
-            break;
+            if (loaded_players_list[i] == old_player)
+            {
+                // replace with the end of the list
+                loaded_players_list[i] = loaded_players_list[(*number_of_loaded_players)--];
+                loaded_players_list[*number_of_loaded_players] = NULL;
+                break;
+            }
         }
+    blockFree(player_page, old_player);
     }
-    if (old_player) blockFree(player_page, old_player);
 }
 
 int writeHeaderToStream(uint8_t **stream, size_t *length, uint32_t type_header)
@@ -270,7 +273,7 @@ int main(int argc, char* argv[])
             }
             else
             {
-                freePlayerByUUID(&player_table, &player_page, loaded_players_list, number_of_loaded_players, loaded_players_list[i]->uuid);
+                freePlayerByUUID(&player_table, &player_page, loaded_players_list, &number_of_loaded_players, loaded_players_list[i]->uuid);
             }
         }
 
@@ -343,7 +346,7 @@ int main(int argc, char* argv[])
                             if (length < sizeof(unload_uuid)) { break; }
                             memcpy(&unload_uuid, stream, sizeof(unload_uuid));
                             // I will not increment any more as there is no more to copy
-                            freePlayerByUUID(&player_table, &player_page, loaded_players_list, number_of_loaded_players, unload_uuid);
+                            freePlayerByUUID(&player_table, &player_page, loaded_players_list, &number_of_loaded_players, unload_uuid);
                         }
                         }
                         break;
