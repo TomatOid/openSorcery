@@ -343,7 +343,7 @@ int main(int argc, char* argv[])
                             if (length < sizeof(unload_uuid)) { break; }
                             memcpy(&unload_uuid, stream, sizeof(unload_uuid));
                             // I will not increment any more as there is no more to copy
-
+                            freePlayerByUUID(&player_table, &player_page, loaded_players_list, number_of_loaded_players, unload_uuid);
                         }
                         }
                         break;
