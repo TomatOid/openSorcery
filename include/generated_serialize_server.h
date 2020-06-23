@@ -3,6 +3,8 @@
 #define STATE_BUFFER_SIZE (8)
 #define TARGET_TICKS_PER_SECOND (20)
 #define PLAYER_MAX_VELOCITY (3)
+#define MAX_CLIENTS (4000)
+#define CLIENT_VIEW_MAX (3)
 enum
 {
     FOREWARD_BUTTON = (1<<0),
@@ -72,7 +74,6 @@ struct Player
     uint32_t write_index;
     uint32_t read_index;
     PlayerState state_buffer[STATE_BUFFER_SIZE];
-    uint64_t last_update_tick;
 };
 int readPlayerFromClient(uint8_t **stream, size_t *len, Player *obj);
 #define C2S_PLAYER_SIZE 28
@@ -102,5 +103,6 @@ typedef enum PlayerPacketType
     PLAYER_DATA_PACKET,
     PLAYER_AUTH_PACKET,
     PLAYER_VERB_PACKET,
+    PLAYER_UNLOAD_PACKET,
 }
 PlayerPacketType;

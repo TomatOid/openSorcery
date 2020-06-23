@@ -3,6 +3,8 @@ CHUNK_HEIGHT :: 32
 STATE_BUFFER_SIZE :: 8
 TARGET_TICKS_PER_SECOND :: 20
 PLAYER_MAX_VELOCITY :: 3
+MAX_CLIENTS :: 4000
+CLIENT_VIEW_MAX :: 3
 
 ButtonFlag :: flags
 {
@@ -78,4 +80,6 @@ PlayerPacketType :: enum
     PLAYER_AUTH_PACKET,
     // This is for actions such as foreward key pressed etc. which are likely to be exclusively client -> server
     PLAYER_VERB_PACKET,
+    // Tell the client that they can free a player
+    PLAYER_UNLOAD_PACKET,
 };

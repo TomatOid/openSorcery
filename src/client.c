@@ -11,6 +11,7 @@
 #include <string.h>
 #include <stdint.h>
 #include "generated_serialize_client.h"
+#include "HashTable.h"
 #include <time.h>
 
 void playerToLatestState(Player *player)
@@ -23,6 +24,35 @@ void playerToLatestState(Player *player)
         player->position.z += current_read_state->z_velocity;
         current_read_state->position = player->position;
     }
+}
+
+int playerToStateAtTime(Player *player, uint32_t time_tick_number)
+{
+    for (int i = player->write_index - 1; i > player->write_index - STATE_BUFFER_SIZE; i--)
+    {
+        PlayerState *state_lower = &player->state_buffer[i % STATE_BUFFER_SIZE];
+        if (state_lower->command_id <= time_tick_number)
+        {
+            if (state_lower->command_id < time_tick_number && i < player->write_index - 1)
+            {
+                Vector3 position;
+                PlayerState *state_upper = &player->state_buffer[i + 1 % STATE_BUFFER_SIZE];
+                position.x = (state_lower->position.x * (time_tick_number - state_lower->command_id) 
+                    + state_upper->position.x * (state_upper->command_id - time_tick_number)) / (state_upper->command_id - state_lower->command_id);
+                position.y = (state_lower->position.y * (time_tick_number - state_lower->command_id) 
+                    + state_upper->position.y * (state_upper->command_id - time_tick_number)) / (state_upper->command_id - state_lower->command_id);
+                position.z = (state_lower->position.z * (time_tick_number - state_lower->command_id) 
+                    + state_upper->position.z * (state_upper->command_id - time_tick_number)) / (state_upper->command_id - state_lower->command_id);
+                player->position = position;
+            }
+            else
+            {
+                player->position = state_lower->position;
+            }
+            return 1;
+        }
+    }
+    return 0;
 }
 
 int playerChangePastStateThenPropagate(Player *player, PlayerState correct_past_state)
@@ -50,6 +80,22 @@ int playerChangePastStateThenPropagate(Player *player, PlayerState correct_past_
         return 1;
     } 
     else return 0;
+}
+
+void freePlayerByUUID(HashTable *player_table, BlockPage *player_page, Player **loaded_players_list, size_t number_of_loaded_players, uint64_t unload_uuid)
+{
+    void *old_player = removeFromTable(player_table, unload_uuid);
+    for (int i = 0; i < number_of_loaded_players; i++)
+    {
+        if (loaded_players_list[i] == old_player)
+        {
+            // replace with the end of the list
+            loaded_players_list[i] = loaded_players_list[number_of_loaded_players--];
+            loaded_players_list[number_of_loaded_players] = NULL;
+            break;
+        }
+    }
+    if (old_player) blockFree(player_page, old_player);
 }
 
 int writeHeaderToStream(uint8_t **stream, size_t *length, uint32_t type_header)
@@ -116,6 +162,17 @@ int main(int argc, char* argv[])
     if (!peer) { fprintf(stderr, "There was an issue connecting to the host\n"); return -1; }
     // if (enet_host_service(client, &event, 1000) <= 0) { printf("A response was not recieved\n"); exit(0); }
 
+    // set up storage for the players
+    static BlockPage player_page;
+    makePage(&player_page, MAX_CLIENTS, sizeof(Player));
+    Player *loaded_players_list[MAX_CLIENTS];
+    size_t number_of_loaded_players = 0;
+
+    static HashTable player_table = { 0 };
+    player_table.len = MAX_CLIENTS;
+    player_table.items = calloc(player_table.len, sizeof(HashItem *));
+    makePage(&player_table.page, player_table.len, sizeof(HashItem));
+
     // Now setup SDL
     if (SDL_Init(SDL_INIT_EVERYTHING)) { fprintf(stderr, "There was an error initializing SDL"); exit(EXIT_FAILURE); }
     SDL_Window *game_window;
@@ -123,10 +180,13 @@ int main(int argc, char* argv[])
     SDL_CreateWindowAndRenderer(256, 256, SDL_WINDOW_SHOWN, &game_window, &main_renderer);
     uint16_t button_state = 0;
     uint32_t actual_ticks_per_second = TARGET_TICKS_PER_SECOND;
+    uint32_t interpolation_ticks = 4;
     uint32_t complete_cycle_by = SDL_GetTicks() + 1000 / actual_ticks_per_second;
+    uint32_t client_tick_count = interpolation_ticks;
     for (;;)
     {
         SDL_Event user_event;
+        // Take user input
         while (SDL_PollEvent(&user_event))
         {
             switch (user_event.type)
@@ -198,12 +258,23 @@ int main(int argc, char* argv[])
         enet_peer_send(&client->peers[0], 0, enet_packet_create(player_state_buffer, sizeof(player_state_buffer), 0));
         // just draw a pixel where the player should be
         SDL_SetRenderDrawColor(main_renderer, 0, 0, 0, 0);
-        //SDL_RenderClear(main_renderer);
+        SDL_RenderClear(main_renderer);
         SDL_SetRenderDrawColor(main_renderer, 255, 255, 255, 0);
         SDL_RenderDrawPoint(main_renderer, this_player.position.x, this_player.position.z);
-        //printf("%d, %d\n", this_player.position.x, this_player.position.y);
+        // now draw every other player
+        for (int i = 0; i < number_of_loaded_players; i++)
+        {
+            if (playerToStateAtTime(loaded_players_list[i], client_tick_count - interpolation_ticks))
+            {
+                SDL_RenderDrawPoint(main_renderer, loaded_players_list[i]->position.x, loaded_players_list[i]->position.z);
+            }
+            else
+            {
+                freePlayerByUUID(&player_table, &player_page, loaded_players_list, number_of_loaded_players, loaded_players_list[i]->uuid);
+            }
+        }
 
-
+        // Recieve packets from the server for the rest of the time
         while (SDL_GetTicks() < complete_cycle_by)
         {
             if (enet_host_service(client, &event, 1) >= 0)
@@ -232,7 +303,7 @@ int main(int argc, char* argv[])
                         switch (readHeaderFromStream(&stream, &length))
                         {
                         case PLAYER_VERB_PACKET:
-                            ;
+                        {
                             PlayerState recieved_state = {0};
                             readPlayerStateFromServer(&stream, &length, &recieved_state);
                             if (recieved_state.target_uuid == this_player.uuid)
@@ -241,8 +312,39 @@ int main(int argc, char* argv[])
                             }
                             else
                             {
-                                SDL_RenderDrawPoint(main_renderer, recieved_state.position.x, recieved_state.position.z);
+                                Player *target_player = findInTable(&player_table, recieved_state.target_uuid);
+                                // if we have not seen it yet, create a new space for it
+                                if (!target_player)
+                                {
+                                    target_player = blockAlloc(&player_page);
+                                    if (!target_player) break;
+                                    // we are going to use a seperate state counter to make interpolation easier
+                                    // as it will guarantee that each state is sequential with no skipping
+                                    // this may cause jumps due to packets arriving out-of-order and may need to be changed
+                                    target_player->read_index = 0;
+                                    target_player->write_index = 0;
+                                    // maybe if it is full we need to purge the BlockPage
+                                    insertToTable(&player_table, recieved_state.target_uuid, target_player);
+
+                                    loaded_players_list[number_of_loaded_players] = target_player;
+                                    number_of_loaded_players++; 
+                                }
+                                recieved_state.command_id = client_tick_count;
+                                target_player->position = recieved_state.position;
+                                target_player->state_buffer[target_player->write_index % STATE_BUFFER_SIZE] = recieved_state;
+                                target_player->write_index++;
+                                // SDL_RenderDrawPoint(main_renderer, recieved_state.position.x, recieved_state.position.z);
                             }
+                            break;
+                        }
+                        case PLAYER_UNLOAD_PACKET:
+                        {
+                            uint64_t unload_uuid;
+                            if (length < sizeof(unload_uuid)) { break; }
+                            memcpy(&unload_uuid, stream, sizeof(unload_uuid));
+                            // I will not increment any more as there is no more to copy
+
+                        }
                         }
                         break;
                     case ENET_EVENT_TYPE_DISCONNECT:
@@ -255,5 +357,6 @@ int main(int argc, char* argv[])
         }
         complete_cycle_by += 1000 / actual_ticks_per_second;
         SDL_RenderPresent(main_renderer);
+        client_tick_count++;
     }
 }

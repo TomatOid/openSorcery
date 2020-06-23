@@ -8,8 +8,7 @@
 #include "HashTable.h"
 #include "BlockAllocate.h"
 #include "generated_serialize_server.h"
-#define MAX_CLIENTS 4000
-#define CLIENT_VIEW_MAX 3
+
 #define MAX_CHANNELS 2
 
 int input_is_ready = 0;
@@ -17,6 +16,25 @@ pthread_cond_t await_response_cond;
 pthread_mutex_t await_response_mutex;
 int argument_count = 0;
 char *argument_pointers[256];
+
+int writeHeaderToStream(uint8_t **stream, size_t *length, uint32_t type_header)
+{
+    if (*length < sizeof(type_header)) { return 0; }
+    memcpy(*stream, &type_header, sizeof(type_header));
+    *stream += sizeof(type_header);
+    *length -= sizeof(type_header);
+    return 1;
+}
+
+uint32_t readHeaderFromStream(uint8_t **stream, size_t *length)
+{
+    uint32_t result = 0xFFFFFFFF;
+    if (*length < sizeof(uint32_t)) { return result; }
+    memcpy(&result, *stream, sizeof(uint32_t));
+    *stream += sizeof(uint32_t);
+    *length -= sizeof(uint32_t);
+    return result;
+}
 
 // this function is called by a seperate thread and takes input
 // TODO: Add ncurses
@@ -212,12 +230,13 @@ int main(int argc, char* argv[])
                         switch (packet_type)
                         {
                         case PLAYER_VERB_PACKET:
-                            ;Player *target_player = event.peer->data;
+                        {
+                            Player *target_player = event.peer->data;
                             target_player->write_index++;
                             readPlayerStateFromClient(&packet_data, &length, &target_player->state_buffer[target_player->write_index % STATE_BUFFER_SIZE]);
                             //target_player->last_update_tick = tick_number;
                             break;
-                        
+                        }
                         default:
                             break;
                         }
@@ -255,6 +274,13 @@ int main(int argc, char* argv[])
                     {
                         printf("Player %s disconnected.\n", ((Player *)event.peer->data)->name);
                         removeFromTable(&player_by_UUID, ((Player *)event.peer->data)->uuid);
+                        // now broadcast that the player has disconnected so the clients can free resources
+                        ENetPacket *disconnect_packet = enet_packet_create(NULL, sizeof(uint32_t) + sizeof(uint64_t), 0);
+                        uint8_t *stream = disconnect_packet->data;
+                        size_t length = disconnect_packet->dataLength;
+                        writeHeaderToStream(&stream, &length, PLAYER_UNLOAD_PACKET);
+                        memcpy(stream, &((Player *)event.peer->data)->uuid, sizeof(uint64_t));
+                        enet_host_broadcast(server, 0, disconnect_packet);
                         if (!blockFree(&player_page, event.peer->data)) exit(EXIT_FAILURE);
                     } else printf("A connection attempt failed.\n");
                     break;
@@ -267,4 +293,3 @@ int main(int argc, char* argv[])
         tick_number++;
     }
 }
-
