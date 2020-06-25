@@ -20,8 +20,9 @@ typedef struct
 
 void* blockAlloc(BlockPage* page)
 {
-    // atomically get a block location
-    ptrdiff_t my_block = page->top--;
+    // get a block location
+    page->top--;
+    ptrdiff_t my_block = page->top;
     // now, we can check if we got a valid block, and release it if it is invalid
     if (my_block < 0 || my_block >= (ptrdiff_t)page->numblk)
     {
@@ -61,7 +62,7 @@ void makePage(BlockPage* res, size_t num_blocks, size_t block_size)
         res->free[num_blocks - i - 1] = (void*)ptr;
         ptr += block_size;
     }
-    res->top = num_blocks - 1;
+    res->top = num_blocks;
     res->numblk = num_blocks;
     res->blksize = block_size;
 } 

@@ -3,7 +3,7 @@
 #define STATE_BUFFER_SIZE (8)
 #define TARGET_TICKS_PER_SECOND (20)
 #define PLAYER_MAX_VELOCITY (3)
-#define MAX_CLIENTS (4000)
+#define MAX_CLIENTS (2)
 #define CLIENT_VIEW_MAX (3)
 enum
 {

@@ -211,7 +211,7 @@ int main(int argc, char* argv[])
                     // then when a packet is recieved, we know it should be a PLAYER_DATA_PACKET
                     event.peer->data = NULL;
                     enet_peer_timeout(event.peer, 0, 0, 0);
-                    if (event.peer->data) { enet_peer_reset(event.peer); break; }
+                    //if (event.peer->data) { enet_peer_reset(event.peer); break; }
                     printf("A connection request was recieved from address: %x\n", event.peer->address.host);
                     break;
                 case ENET_EVENT_TYPE_RECEIVE:
@@ -253,7 +253,7 @@ int main(int argc, char* argv[])
                             // allocate room for a new player and read the allowed info from the client
                             // TODO: clean this up a bit with a temp variable
                             Player *new_player = blockAlloc(&player_page);
-
+                            //Player *new_player = calloc(1, sizeof(Player));
                             if (!new_player)
                             {
                                 enet_peer_reset(event.peer);
@@ -282,6 +282,8 @@ int main(int argc, char* argv[])
                         memcpy(stream, &((Player *)event.peer->data)->uuid, sizeof(uint64_t));
                         enet_host_broadcast(server, 0, disconnect_packet);
                         if (!blockFree(&player_page, event.peer->data)) exit(EXIT_FAILURE);
+                        //free(event.peer->data);
+                        event.peer->data = NULL;
                     } else printf("A connection attempt failed.\n");
                     break;
                 default:

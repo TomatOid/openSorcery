@@ -87,7 +87,7 @@ void freePlayerByUUID(HashTable *player_table, BlockPage *player_page, Player **
     void *old_player = removeFromTable(player_table, unload_uuid);
     if (old_player)
     {
-        for (int i = 0; i < number_of_loaded_players; i++)
+        for (int i = 0; i < *number_of_loaded_players; i++)
         {
             if (loaded_players_list[i] == old_player)
             {
@@ -267,7 +267,7 @@ int main(int argc, char* argv[])
         // now draw every other player
         for (int i = 0; i < number_of_loaded_players; i++)
         {
-            if (playerToStateAtTime(loaded_players_list[i], client_tick_count - interpolation_ticks))
+            if (1 || playerToStateAtTime(loaded_players_list[i], client_tick_count - interpolation_ticks))
             {
                 SDL_RenderDrawPoint(main_renderer, loaded_players_list[i]->position.x, loaded_players_list[i]->position.z);
             }
