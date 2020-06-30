@@ -28,15 +28,15 @@ void playerToLatestState(Player *player)
 
 int playerToStateAtTime(Player *player, uint32_t time_tick_number)
 {
-    for (int i = player->write_index - 1; i > player->write_index - STATE_BUFFER_SIZE; i--)
+    for (int i = 0; i > STATE_BUFFER_SIZE; i++)
     {
-        PlayerState *state_lower = &player->state_buffer[i % STATE_BUFFER_SIZE];
+        PlayerState *state_lower = &player->state_buffer[i];
         if (state_lower->command_id <= time_tick_number)
         {
-            if (state_lower->command_id < time_tick_number && i < player->write_index - 1)
+            if (state_lower->command_id < time_tick_number && i < STATE_BUFFER_SIZE - 1)
             {
                 Vector3 position;
-                PlayerState *state_upper = &player->state_buffer[i + 1 % STATE_BUFFER_SIZE];
+                PlayerState *state_upper = &player->state_buffer[i + 1];
                 position.x = (state_lower->position.x * (time_tick_number - state_lower->command_id) 
                     + state_upper->position.x * (state_upper->command_id - time_tick_number)) / (state_upper->command_id - state_lower->command_id);
                 position.y = (state_lower->position.y * (time_tick_number - state_lower->command_id) 
@@ -334,8 +334,19 @@ int main(int argc, char* argv[])
                                 }
                                 recieved_state.command_id = client_tick_count;
                                 target_player->position = recieved_state.position;
-                                target_player->state_buffer[target_player->write_index % STATE_BUFFER_SIZE] = recieved_state;
-                                target_player->write_index++;
+                                //target_player->state_buffer[target_player->write_index % STATE_BUFFER_SIZE] = recieved_state;
+                                if (recieved_state.command_id < target_player->state_buffer[0].command_id) break;
+                                target_player->state_buffer[0] = recieved_state;
+                                for (int i = 1; i < STATE_BUFFER_SIZE; i++)
+                                {
+                                    if (target_player->state_buffer[i].command_id > target_player->state_buffer[i - 1].command_id) break;
+                                    else
+                                    {
+                                        target_player->state_buffer[i - 1] = target_player->state_buffer[i];
+                                        target_player->state_buffer[i] = recieved_state;
+                                    }
+                                }
+                                //target_player->write_index++;
                                 // SDL_RenderDrawPoint(main_renderer, recieved_state.position.x, recieved_state.position.z);
                             }
                             break;
